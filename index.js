@@ -1,9 +1,9 @@
-const express = require('express');
-const cors = require('cors');
+const express = require("express");
+const cors = require("cors");
 const app = express();
-require('dotenv').config();
+require("dotenv").config();
 const port = process.env.PORT || 3000;
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 // Middleware
 app.use(cors());
@@ -27,6 +27,9 @@ async function run() {
 
     const db = client.db("portfolio");
     const reviewCollection = db.collection("reviews");
+    const blogCollection = db.collection("blogs");
+    const tagCollection = db.collection("tags");
+    const categoryCollection = db.collection("categories");
 
     // GET all reviews
     app.get("/reviews", async (req, res) => {
@@ -59,14 +62,141 @@ async function run() {
         .toArray();
 
       const result = stats[0] || { avgRating: 0, count: 0 };
-      res.send({ avg: Number(result.avgRating || 0).toFixed(1), count: result.count });
+      res.send({
+        avg: Number(result.avgRating || 0).toFixed(1),
+        count: result.count,
+      });
+    });
+
+    app.get("/blogs", async (req, res) => {
+      try {
+        const blogs = await blogCollection
+          .find()
+          .sort({ createdAt: -1 })
+          .toArray();
+        res.json({ success: true, data: blogs });
+      } catch (error) {
+        console.error("Error fetching blogs:", error);
+        res
+          .status(500)
+          .json({ success: false, message: "Failed to fetch blogs" });
+      }
+    });
+
+
+
+app.get("/blogs/:id", async (req, res) => {
+  const { id } = req.params;
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).json({ success: false, message: "Invalid blog ID" });
+  }
+
+  try {
+    const blog = await blogCollection.findOne({ _id: new ObjectId(id) });
+    if (!blog) {
+      return res.status(404).json({ success: false, message: "Blog not found" });
+    }
+    res.json({ success: true, data: blog });
+  } catch (error) {
+    console.error("Error fetching blog by ID:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch blog" });
+  }
+});
+
+
+app.post("/blogs", async (req, res) => {
+  try {
+    const { title, content, author, tags, thumbnail, category } = req.body;
+
+    if (!title || !content) {
+      return res.status(400).json({
+        success: false,
+        message: "Title and content are required",
+      });
+    }
+
+    const newBlog = {
+      title,
+      content,
+      author: author || "Anonymous",
+      tags: Array.isArray(tags) ? tags : [],
+      thumbnail: thumbnail || "",      // add this
+      category: category || "",        // add this
+      createdAt: new Date(),
+    };
+
+    const result = await blogCollection.insertOne(newBlog);
+    res.status(201).json({
+      success: true,
+      message: "Blog created",
+      insertedId: result.insertedId,
+    });
+  } catch (error) {
+    console.error("Error adding blog:", error);
+    res.status(500).json({ success: false, message: "Failed to create blog" });
+  }
+});
+
+
+    // ========== TAGS ==========
+    app.get("/tags", async (req, res) => {
+      try {
+        const tags = await tagCollection.find().sort({ name: 1 }).toArray();
+        res.json(tags);
+      } catch (err) {
+        res.status(500).json({ message: "Failed to fetch tags" });
+      }
+    });
+
+    app.post("/tags", async (req, res) => {
+      const { name } = req.body;
+      if (!name)
+        return res.status(400).json({ message: "Tag name is required" });
+
+      try {
+        const result = await tagCollection.insertOne({
+          name,
+          createdAt: new Date(),
+        });
+        res.status(201).json({ success: true, insertedId: result.insertedId });
+      } catch (err) {
+        res.status(500).json({ message: "Failed to add tag" });
+      }
+    });
+
+    // ========== CATEGORIES ==========
+    app.get("/categories", async (req, res) => {
+      try {
+        const categories = await categoryCollection
+          .find()
+          .sort({ name: 1 })
+          .toArray();
+        res.json(categories);
+      } catch (err) {
+        res.status(500).json({ message: "Failed to fetch categories" });
+      }
+    });
+
+    app.post("/categories", async (req, res) => {
+      const { name } = req.body;
+      if (!name)
+        return res.status(400).json({ message: "Category name is required" });
+
+      try {
+        const result = await categoryCollection.insertOne({
+          name,
+          createdAt: new Date(),
+        });
+        res.status(201).json({ success: true, insertedId: result.insertedId });
+      } catch (err) {
+        res.status(500).json({ message: "Failed to add category" });
+      }
     });
 
     // Root route
     app.get("/", (req, res) => {
       res.send("🔥 Moshiur Rahman Portfolio Server is Live");
     });
-
   } catch (err) {
     console.error("❌ Error connecting to MongoDB:", err);
   }
