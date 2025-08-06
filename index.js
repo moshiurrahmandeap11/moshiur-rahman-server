@@ -31,6 +31,72 @@ async function run() {
     const tagCollection = db.collection("tags");
     const categoryCollection = db.collection("categories");
     const commentCollection = db.collection("comments");
+    const loveCollection = db.collection("loves");
+    const commentLikeCollection = db.collection("commentLikes");
+
+
+    // Get love count by blogId
+    app.get("/loves/:blogId", async (req, res) => {
+      const { blogId } = req.params;
+      try {
+        const count = await loveCollection.countDocuments({ blogId });
+        res.json({ success: true, count });
+      } catch (err) {
+        res
+          .status(500)
+          .json({ success: false, message: "Failed to get loves" });
+      }
+    });
+
+    app.post("/loves", async (req, res) => {
+      const { blogId, userId } = req.body;
+
+      try {
+        const blog = await blogCollection.findOne({
+          _id: new ObjectId(blogId),
+        });
+        if (!blog) return res.status(404).send({ message: "Blog not found" });
+
+        const loves = blog.loves || [];
+        const isLoved = loves.includes(userId);
+
+        const updatedLoves = isLoved
+          ? loves.filter((id) => id !== userId)
+          : [...loves, userId];
+
+        await blogCollection.updateOne(
+          { _id: new ObjectId(blogId) },
+          { $set: { loves: updatedLoves } }
+        );
+
+        res.send({ message: "Love updated", loves: updatedLoves });
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ message: "Something went wrong" });
+      }
+    });
+
+    // Check if a specific user loved a specific blog
+    app.get("/loves/status/:blogId", async (req, res) => {
+      const { blogId } = req.params;
+      const { userId } = req.query;
+
+      if (!blogId || !userId) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Missing blogId or userId" });
+      }
+
+      try {
+        const loved = await loveCollection.findOne({ blogId, userId });
+        const count = await loveCollection.countDocuments({ blogId });
+        res.json({ success: true, loved: !!loved, count });
+      } catch (err) {
+        res
+          .status(500)
+          .json({ success: false, message: "Failed to fetch love status" });
+      }
+    });
 
     // GET all reviews
     app.get("/reviews", async (req, res) => {
@@ -198,58 +264,124 @@ async function run() {
       }
     });
 
-
     app.post("/comments", async (req, res) => {
-  try {
-    const { blogId, username, content } = req.body;
+      try {
+        const { blogId, username, content } = req.body;
 
-    if (!blogId || !username || !content) {
-      return res.status(400).json({
-        success: false,
-        message: "blogId, username, and content are required",
-      });
-    }
+        if (!blogId || !username || !content) {
+          return res.status(400).json({
+            success: false,
+            message: "blogId, username, and content are required",
+          });
+        }
 
-    const comment = {
-      blogId: new ObjectId(blogId),
-      username,
-      content,
-      createdAt: new Date(),
-    };
+        const comment = {
+          blogId: new ObjectId(blogId),
+          username,
+          content,
+          createdAt: new Date(),
+        };
 
-    const result = await commentCollection.insertOne(comment);
+        const result = await commentCollection.insertOne(comment);
 
-    res.status(201).json({
-      success: true,
-      message: "Comment added",
-      insertedId: result.insertedId,
+        res.status(201).json({
+          success: true,
+          message: "Comment added",
+          insertedId: result.insertedId,
+        });
+      } catch (error) {
+        console.error("Error adding comment:", error);
+        res
+          .status(500)
+          .json({ success: false, message: "Failed to add comment" });
+      }
     });
-  } catch (error) {
-    console.error("Error adding comment:", error);
-    res.status(500).json({ success: false, message: "Failed to add comment" });
-  }
-});
 
+    app.get("/comments/:blogId", async (req, res) => {
+      const { blogId } = req.params;
 
-app.get("/comments/:blogId", async (req, res) => {
-  const { blogId } = req.params;
+      if (!ObjectId.isValid(blogId)) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid blog ID" });
+      }
 
-  if (!ObjectId.isValid(blogId)) {
-    return res.status(400).json({ success: false, message: "Invalid blog ID" });
+      try {
+        const comments = await commentCollection
+          .find({ blogId: new ObjectId(blogId) })
+          .sort({ createdAt: -1 })
+          .toArray();
+
+        res.json({ success: true, data: comments });
+      } catch (error) {
+        console.error("Error fetching comments:", error);
+        res
+          .status(500)
+          .json({ success: false, message: "Failed to fetch comments" });
+      }
+    });
+
+  
+    app.post("/comments/like", async (req, res) => {
+  const { commentId, userId } = req.body;
+
+  if (!commentId || !userId) {
+    return res.status(400).json({ success: false, message: "commentId and userId are required" });
   }
 
   try {
-    const comments = await commentCollection
-      .find({ blogId: new ObjectId(blogId) })
-      .sort({ createdAt: -1 })
-      .toArray();
+    const existingLike = await commentLikeCollection.findOne({ commentId, userId });
 
-    res.json({ success: true, data: comments });
-  } catch (error) {
-    console.error("Error fetching comments:", error);
-    res.status(500).json({ success: false, message: "Failed to fetch comments" });
+    if (existingLike) {
+      // Unlike
+      await commentLikeCollection.deleteOne({ _id: existingLike._id });
+      res.json({ success: true, liked: false, message: "Comment unliked" });
+    } else {
+      // Like
+      await commentLikeCollection.insertOne({
+        commentId,
+        userId,
+        createdAt: new Date(),
+      });
+      res.json({ success: true, liked: true, message: "Comment liked" });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to like/unlike comment" });
   }
 });
+
+
+app.get("/comments/like-count/:commentId", async (req, res) => {
+  const { commentId } = req.params;
+
+  try {
+    const count = await commentLikeCollection.countDocuments({ commentId });
+    res.json({ success: true, count });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to get like count" });
+  }
+});
+
+
+app.get("/comments/liked/:commentId", async (req, res) => {
+  const { commentId } = req.params;
+  const { userId } = req.query;
+
+  if (!userId) {
+    return res.status(400).json({ success: false, message: "userId is required" });
+  }
+
+  try {
+    const liked = await commentLikeCollection.findOne({ commentId, userId });
+    res.json({ success: true, liked: !!liked });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to check like status" });
+  }
+});
+
+
+
+
 
 
 
