@@ -4,6 +4,12 @@ const app = express();
 require("dotenv").config();
 const port = process.env.PORT || 3000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const admin = require("firebase-admin");
+const serviceAccount = require("./bro/sdk/firebase-adminsdk.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
 
 // Middleware
 app.use(cors());
@@ -33,6 +39,62 @@ async function run() {
     const commentCollection = db.collection("comments");
     const loveCollection = db.collection("loves");
     const commentLikeCollection = db.collection("commentLikes");
+
+    app.get("/all-users", async (req, res) => {
+      try {
+        const listUsersResult = await admin.auth().listUsers(1000); // max 1000 users at once
+        const users = listUsersResult.users.map((user) => ({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          emailVerified: user.emailVerified,
+          disabled: user.disabled,
+          metadata: user.metadata,
+        }));
+        res.json({ success: true, users });
+      } catch (error) {
+        console.error("Failed to list users:", error);
+        res.status(500).json({ success: false, message: error.message });
+      }
+    });
+
+
+    app.post("/visits", async (req, res) => {
+  try {
+    const visit = {
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      visitedAt: new Date(),
+    };
+    await db.collection("visits").insertOne(visit);
+    res.json({ success: true, message: "Visit logged" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to log visit" });
+  }
+});
+
+
+app.get("/visitors/monthly", async (req, res) => {
+  try {
+    const start = new Date();
+    start.setDate(1); // first day of current month
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + 1);
+
+    const count = await db.collection("visits").countDocuments({
+      visitedAt: { $gte: start, $lt: end },
+    });
+
+    res.json({ success: true, count });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to get monthly visitors" });
+  }
+});
+
+
 
 
     // Get love count by blogId
@@ -321,71 +383,79 @@ async function run() {
       }
     });
 
-  
     app.post("/comments/like", async (req, res) => {
-  const { commentId, userId } = req.body;
+      const { commentId, userId } = req.body;
 
-  if (!commentId || !userId) {
-    return res.status(400).json({ success: false, message: "commentId and userId are required" });
-  }
+      if (!commentId || !userId) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "commentId and userId are required",
+          });
+      }
 
-  try {
-    const existingLike = await commentLikeCollection.findOne({ commentId, userId });
+      try {
+        const existingLike = await commentLikeCollection.findOne({
+          commentId,
+          userId,
+        });
 
-    if (existingLike) {
-      // Unlike
-      await commentLikeCollection.deleteOne({ _id: existingLike._id });
-      res.json({ success: true, liked: false, message: "Comment unliked" });
-    } else {
-      // Like
-      await commentLikeCollection.insertOne({
-        commentId,
-        userId,
-        createdAt: new Date(),
-      });
-      res.json({ success: true, liked: true, message: "Comment liked" });
-    }
-  } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to like/unlike comment" });
-  }
-});
+        if (existingLike) {
+          // Unlike
+          await commentLikeCollection.deleteOne({ _id: existingLike._id });
+          res.json({ success: true, liked: false, message: "Comment unliked" });
+        } else {
+          // Like
+          await commentLikeCollection.insertOne({
+            commentId,
+            userId,
+            createdAt: new Date(),
+          });
+          res.json({ success: true, liked: true, message: "Comment liked" });
+        }
+      } catch (err) {
+        res
+          .status(500)
+          .json({ success: false, message: "Failed to like/unlike comment" });
+      }
+    });
 
+    app.get("/comments/like-count/:commentId", async (req, res) => {
+      const { commentId } = req.params;
 
-app.get("/comments/like-count/:commentId", async (req, res) => {
-  const { commentId } = req.params;
+      try {
+        const count = await commentLikeCollection.countDocuments({ commentId });
+        res.json({ success: true, count });
+      } catch (err) {
+        res
+          .status(500)
+          .json({ success: false, message: "Failed to get like count" });
+      }
+    });
 
-  try {
-    const count = await commentLikeCollection.countDocuments({ commentId });
-    res.json({ success: true, count });
-  } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to get like count" });
-  }
-});
+    app.get("/comments/liked/:commentId", async (req, res) => {
+      const { commentId } = req.params;
+      const { userId } = req.query;
 
+      if (!userId) {
+        return res
+          .status(400)
+          .json({ success: false, message: "userId is required" });
+      }
 
-app.get("/comments/liked/:commentId", async (req, res) => {
-  const { commentId } = req.params;
-  const { userId } = req.query;
-
-  if (!userId) {
-    return res.status(400).json({ success: false, message: "userId is required" });
-  }
-
-  try {
-    const liked = await commentLikeCollection.findOne({ commentId, userId });
-    res.json({ success: true, liked: !!liked });
-  } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to check like status" });
-  }
-});
-
-
-
-
-
-
-
-
+      try {
+        const liked = await commentLikeCollection.findOne({
+          commentId,
+          userId,
+        });
+        res.json({ success: true, liked: !!liked });
+      } catch (err) {
+        res
+          .status(500)
+          .json({ success: false, message: "Failed to check like status" });
+      }
+    });
 
     // Root route
     app.get("/", (req, res) => {
