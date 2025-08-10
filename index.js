@@ -4,14 +4,6 @@ const app = express();
 require("dotenv").config();
 const port = process.env.PORT || 3000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-const admin = require('firebase-admin');
-
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
-
 
 
 // Middleware
@@ -43,24 +35,6 @@ async function run() {
     const loveCollection = db.collection("loves");
     const commentLikeCollection = db.collection("commentLikes");
 
-    app.get("/all-users", async (req, res) => {
-      try {
-        const listUsersResult = await admin.auth().listUsers(1000); // max 1000 users at once
-        const users = listUsersResult.users.map((user) => ({
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-          emailVerified: user.emailVerified,
-          disabled: user.disabled,
-          metadata: user.metadata,
-        }));
-        res.json({ success: true, users });
-      } catch (error) {
-        console.error("Failed to list users:", error);
-        res.status(500).json({ success: false, message: error.message });
-      }
-    });
 
 
     app.post("/visits", async (req, res) => {
