@@ -4,6 +4,10 @@ const app = express();
 require("dotenv").config();
 const port = process.env.PORT || 3000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const multer = require("multer");
+const path = require("path");
+const axios = require("axios");
+const moshiurData = require('../../Portfolio/moshiur-rahman-server/public/moshiur.json'); 
 
 
 // Middleware
@@ -34,43 +38,118 @@ async function run() {
     const commentCollection = db.collection("comments");
     const loveCollection = db.collection("loves");
     const commentLikeCollection = db.collection("commentLikes");
+    const commandsCollection = db.collection("commands");
+
+
+    // Store command and response
+app.post("/ai-command", async (req, res) => {
+  const { command, response } = req.body;
+  if (!command || !response) {
+    return res.status(400).json({ success: false, message: "Command and response required" });
+  }
+  await commandsCollection.insertOne({ command, response, createdAt: new Date() });
+  res.json({ success: true });
+});
+    
+
+// Get all previous commands
+app.get("/ai-history", async (req, res) => {
+  const history = await commandsCollection.find({}).sort({ createdAt: 1 }).toArray();
+  res.json(history);
+});
 
 
 
-    app.post("/visits", async (req, res) => {
+
+// AI answer endpoint (with context) using OpenRouter
+app.post("/ai-answer", async (req, res) => {
+  // command এর সাথে mode টিও নিন
+  const { command, mode } = req.body;
+  if (!command || !mode) {
+    return res.status(400).json({ success: false, message: "Command and mode required" });
+  }
+
+  // Get previous commands for context
+  const history = await commandsCollection.find({}).sort({ createdAt: 1 }).toArray();
+  const lastHistory = history.slice(-10); // শেষ ১০টি বার্তার কনটেক্সট
+
+  const messages = [];
+  let systemMessage = "";
+
+  // মোড অনুযায়ী সিস্টেম মেসেজ সেট করুন
+  if (mode === 'moshiur') {
+    // moshiurData.json ফাইলটি এখানে require করে নিতে হবে
+    // const moshiurData = require('./path/to/moshiur.json');
+    systemMessage = `You are a helpful AI assistant who ONLY answers questions based on this JSON data about Moshiur Rahman:\n${JSON.stringify(moshiurData, null, 2)}\nIf asked about anything else, politely say you only answer questions about Moshiur Rahman.`;
+    messages.push({ role: "system", content: systemMessage });
+  } else { // General Mode
+    systemMessage = "You are a friendly and helpful AI assistant named Gemini. Your goal is to have natural, flowing conversations. Be empathetic, use personality, and remember the context of the conversation to provide relevant and engaging responses. Avoid being overly formal or robotic.";
+    messages.push({ role: "system", content: systemMessage });
+  }
+
+  // Properly format history messages
+  lastHistory.forEach(item => {
+    messages.push({ role: "user", content: item.command });
+    messages.push({ role: "assistant", content: item.response });
+  });
+
+  // Add the current user command
+  messages.push({ role: "user", content: command });
+
+  // Call OpenRouter API
   try {
-    const visit = {
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-      visitedAt: new Date(),
-    };
-    await db.collection("visits").insertOne(visit);
-    res.json({ success: true, message: "Visit logged" });
+    const aiResponse = await axios.post(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        model: "openai/gpt-3.5-turbo", // gpt-3.5-turbo conversational কাজের জন্য ভালো
+        messages
+      },
+      {
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    const answer = aiResponse.data.choices[0].message.content.trim();
+
+    // Store new command and answer
+    await commandsCollection.insertOne({ command, response: answer, createdAt: new Date() });
+
+    res.json({ answer }); // ফ্রন্টএন্ডে শুধু উত্তরটি পাঠান
   } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to log visit" });
+    console.error(err.response?.data || err.message);
+    res.status(500).json({ success: false, message: "AI API error" });
   }
 });
 
 
-app.get("/visitors/monthly", async (req, res) => {
-  try {
-    const start = new Date();
-    start.setDate(1); // first day of current month
-    start.setHours(0, 0, 0, 0);
 
-    const end = new Date(start);
-    end.setMonth(end.getMonth() + 1);
 
-    const count = await db.collection("visits").countDocuments({
-      visitedAt: { $gte: start, $lt: end },
-    });
 
-    res.json({ success: true, count });
-  } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to get monthly visitors" });
-  }
+   const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "uploads/");
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
 });
+const upload = multer({ storage });
 
+app.use("/uploads", express.static("uploads"));
+
+
+
+app.post("/froala-upload", upload.single("file"), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "No file uploaded" });
+  }
+  res.json({
+    link: `http://localhost:${port}/uploads/${req.file.filename}`,
+  });
+});
 
 
 
@@ -174,6 +253,23 @@ app.get("/visitors/monthly", async (req, res) => {
       });
     });
 
+    // DELETE a review by ID
+app.delete("/reviews/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await reviewCollection.deleteOne({ _id: new ObjectId(id) });
+    if (result.deletedCount === 1) {
+      res.send({ success: true, message: "Review deleted successfully" });
+    } else {
+      res.status(404).send({ success: false, message: "Review not found" });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ success: false, message: "Failed to delete review" });
+  }
+});
+
+
     app.get("/blogs", async (req, res) => {
       try {
         const blogs = await blogCollection
@@ -247,6 +343,72 @@ app.get("/visitors/monthly", async (req, res) => {
           .json({ success: false, message: "Failed to create blog" });
       }
     });
+
+
+app.put("/blogs/:id", async (req, res) => {
+  const { id } = req.params;
+  const { title, content, author, tags, thumbnail, category } = req.body;
+
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).json({ success: false, message: "Invalid blog ID" });
+  }
+
+  if (!title || !content) {
+    return res.status(400).json({
+      success: false,
+      message: "Title and content are required",
+    });
+  }
+
+  try {
+    const updatedBlog = {
+      title,
+      content,
+      author: author || "Anonymous",
+      tags: Array.isArray(tags) ? tags : [],
+      thumbnail: thumbnail || "",
+      category: category || "",
+      updatedAt: new Date(),
+    };
+
+    const result = await blogCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updatedBlog }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, message: "Blog not found" });
+    }
+
+    res.json({ success: true, message: "Blog updated successfully" });
+  } catch (error) {
+    console.error("Error updating blog:", error);
+    res.status(500).json({ success: false, message: "Failed to update blog" });
+  }
+});
+
+
+    app.delete("/blogs/:id", async (req, res) => {
+  const { id } = req.params;
+
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).json({ success: false, message: "Invalid blog ID" });
+  }
+
+  try {
+    const result = await blogCollection.deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: "Blog not found" });
+    }
+
+    res.json({ success: true, message: "Blog deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting blog:", error);
+    res.status(500).json({ success: false, message: "Failed to delete blog" });
+  }
+});
+
 
     // ========== TAGS ==========
     app.get("/tags", async (req, res) => {

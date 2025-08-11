@@ -1,0 +1,101 @@
+{
+  "name": "Moshiur Rahman",
+  "username": "moshiur",
+  "title": "Full Stack Web Developer",
+  "bio": "Moshiur Rahman is a highly skilled and passionate full stack web developer from Bangladesh. He specializes in building scalable web applications, intuitive UIs, and secure backend systems. He believes in minimalism, open-source, and developer-friendly ecosystems. He's also deeply passionate about Linux, automation, and building developer tools.",
+  "location": "Bangladesh",
+  "skills": [
+    "HTML5",
+    "CSS3",
+    "JavaScript",
+    "React.js",
+    "Next.js",
+    "Tailwind CSS",
+    "Node.js",
+    "Express.js",
+    "MongoDB",
+    "Firebase",
+    "REST API",
+    "JWT",
+    "Stripe API",
+    "Socket.io",
+    "Linux (Arch)",
+    "Shell Scripting",
+    "Git & GitHub"
+  ],
+  "interests": [
+    "Open source",
+    "Custom Linux distros",
+    "AI-powered assistants",
+    "Automation",
+    "Voice-controlled smart homes",
+    "Backend security",
+    "Minimal UI design",
+    "Community platforms"
+  ],
+  "experience": "3+ years professional experience building full-stack applications",
+  "projects": [
+    {
+      "name": "Coursion",
+      "description": "A complete course management platform with seat limitations, JWT auth, enrollment constraints, and admin controls.",
+      "technologies": ["React", "MongoDB", "Express", "Node.js", "JWT"],
+      "live": "https://coursion.app",
+      "role": "Founder & Lead Developer"
+    },
+    {
+      "name": "CodeCircle",
+      "description": "A forum + membership system with Stripe payments, comment moderation, admin dashboard, and AI integration.",
+      "technologies": ["React", "Stripe", "Express", "MongoDB"],
+      "live": "https://codecircle.dev",
+      "role": "Founder & Full Stack Dev"
+    },
+    {
+      "name": "Linux Assistant Project",
+      "description": "An Arch-based AI-powered JARVIS assistant for Linux — integrates voice control, shell commands, and automation using open-source models.",
+      "technologies": ["Python", "Speech Recognition", "Bash", "Whisper", "Linux"],
+      "status": "In development"
+    },
+    {
+      "name": "Parcel Delivery Platform",
+      "description": "Real-time parcel delivery system with tracking, region-based coverage system, and Firebase auth.",
+      "technologies": ["React", "DaisyUI", "Firebase", "MongoDB"],
+      "status": "Production"
+    }
+  ],
+  "goals": [
+    "Build a custom Linux distro combining macOS-style animations with Linux minimalism",
+    "Automate entire room with open-source voice-controlled AI and custom PCBs",
+    "Build a full AI-powered portfolio with smart Q&A",
+    "Contribute to open source Linux communities"
+  ],
+  "education": {
+    "status": "Self-taught",
+    "comment": "Moshiur believes in practical knowledge, community learning, and building real-world projects."
+  },
+  "contact": {
+    "email": "moshiurrahmandeap@gmail.com",
+    "github": "https://github.com/moshiur",
+    "linkedin": "https://linkedin.com/in/moshiurrahman",
+    "website": "https://moshiur-rahman-7daed.web.app/"
+  },
+  "achievements": [
+    "Completed 'Programming Hero' full stack dev course",
+    "Built multiple live production apps from scratch",
+    "Mastered JWT auth, API security, and full stack integration",
+    "Started working on a Linux-based OS project"
+  ],
+  "quotes": [
+    "Minimal design, maximum impact.",
+    "Linux is not just an OS — it's a lifestyle.",
+    "AI should empower developers, not replace them."
+  ],
+  "personality": [
+    "Creative",
+    "Focused",
+    "Detail-oriented",
+    "Always learning",
+    "Community-driven"
+  ],
+  "language": "Bengali (native), English (fluent)",
+  "ai_profile_summary": "Moshiur Rahman is a full stack developer who builds production-ready platforms, explores open-source automation, and is working on a Linux-based AI assistant. He specializes in React, MongoDB, Express, and Linux tools."
+}
