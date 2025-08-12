@@ -36,7 +36,7 @@ async function run() {
     const commentCollection = db.collection("comments");
     const loveCollection = db.collection("loves");
     const commentLikeCollection = db.collection("commentLikes");
-    const commandsCollection = db.collection("commands");
+        const chatCollection = db.collection("chats");
 
     // Import routes
     app.use("/blogs", require("./routes/blogs")(blogCollection));
@@ -45,8 +45,7 @@ async function run() {
     app.use("/categories", require("./routes/categories")(categoryCollection));
     app.use("/comments", require("./routes/comments")(commentCollection, commentLikeCollection));
     app.use("/loves", require("./routes/loves")(loveCollection, blogCollection));
-    app.use("/", require("./routes/commands")(commandsCollection));
-    app.use("/", require("./routes/aiAnswer")(commandsCollection, moshiurData));
+    app.use("/chats", require("./routes/chatRoutes")(chatCollection, moshiurData));
 
     // Multer & Froala upload route (as before)
     const storage = multer.diskStorage({
