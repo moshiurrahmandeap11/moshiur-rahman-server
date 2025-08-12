@@ -7,7 +7,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const multer = require("multer");
 const path = require("path");
 const axios = require("axios");
-const moshiurData = require('../../Portfolio/moshiur-rahman-server/public/moshiur.json'); 
+const moshiurData = require('./moshiur.json'); 
 
 
 // Middleware
