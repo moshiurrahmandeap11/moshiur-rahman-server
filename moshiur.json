@@ -39,14 +39,14 @@
       "name": "Coursion",
       "description": "A complete course management platform with seat limitations, JWT auth, enrollment constraints, and admin controls.",
       "technologies": ["React", "MongoDB", "Express", "Node.js", "JWT"],
-      "live": "https://coursion.app",
+      "live": "https://coursion-9faf6.web.app/",
       "role": "Founder & Lead Developer"
     },
     {
       "name": "CodeCircle",
       "description": "A forum + membership system with Stripe payments, comment moderation, admin dashboard, and AI integration.",
       "technologies": ["React", "Stripe", "Express", "MongoDB"],
-      "live": "https://codecircle.dev",
+      "live": "https://codecircle5.web.app/",
       "role": "Founder & Full Stack Dev"
     },
     {
@@ -74,9 +74,11 @@
   },
   "contact": {
     "email": "moshiurrahmandeap@gmail.com",
-    "github": "https://github.com/moshiur",
-    "linkedin": "https://linkedin.com/in/moshiurrahman",
-    "website": "https://moshiur-rahman-7daed.web.app/"
+    "github": "https://github.com/moshiurrahmandeap11",
+    "linkedin": "https://linkedin.com/in/moshiurrahmandeap",
+    "website": "https://moshiur-rahman-7daed.web.app/",
+    "facebook": "https://www.facebook.com/moshiurrahmandeap",
+    "instagram": "https://www.instagram.com/__moshiur.rahman.deap/"
   },
   "achievements": [
     "Completed 'Programming Hero' full stack dev course",

@@ -45,7 +45,7 @@ async function run() {
     app.use("/categories", require("./routes/categories")(categoryCollection));
     app.use("/comments", require("./routes/comments")(commentCollection, commentLikeCollection));
     app.use("/loves", require("./routes/loves")(loveCollection, blogCollection));
-    app.use("/chats", require("./routes/chatRoutes")(chatCollection, moshiurData));
+    app.use("/api/", require("./routes/chatRoutes")(chatCollection, moshiurData));
 
     // Multer & Froala upload route (as before)
     const storage = multer.diskStorage({
