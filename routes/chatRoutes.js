@@ -34,7 +34,7 @@ You are Gemini, a professional, friendly AI assistant.
 Use internet search if needed to provide the most accurate and real-time information.
 If you provide links, use HTML anchor tags only, never markdown link syntax.
     `.trim();
-    selectedModel = "openai/gpt-4o-mini:online";
+    selectedModel = "z-ai/glm-4.5-air:free";
   }
 
   const messages = [
