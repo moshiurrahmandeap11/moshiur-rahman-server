@@ -76,7 +76,7 @@ Only use HTML anchor tags for links, never markdown syntax.
 
       const fallback = await axios.post(
         "https://openrouter.ai/api/v1/chat/completions",
-        { model: "openai/gpt-4o-mini:online", messages: generalMessages },
+        { model: "z-ai/glm-4.5-air:free", messages: generalMessages },
         { headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}` } }
       );
 
